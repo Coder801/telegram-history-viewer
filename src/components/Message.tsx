@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { formatDuration, formatFull, formatTime, isImageUrl, mediaLabel, proxiedImage } from "@/lib/format";
+import { directImage, formatDuration, formatFull, formatTime, isImageUrl, mediaLabel, proxiedImage } from "@/lib/format";
 import type { MessageDto } from "@/lib/types";
 import { isBubbleless, isFullBleed, MessageMedia } from "./Media";
 import { imageLinks, RichText } from "./RichText";
@@ -35,17 +35,33 @@ function serviceText(m: MessageDto) {
   }
 }
 
+// URLs whose direct load already failed: list items remount while scrolling, skip straight to the proxy.
+const directFailed = new Set<string>();
+
+/**
+ * Loads the image straight from its source (https, no Referer), falls back to the
+ * /api/img proxy for hosts without https or with hotlink protection, then gives up.
+ */
 function ExternalImage({ url }: { url: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return null;
+  // Fixed per mount: directFailed changes after the first error and must not shift `attempt`.
+  const [sources] = useState(() =>
+    directFailed.has(url) ? [proxiedImage(url)] : [directImage(url), proxiedImage(url)],
+  );
+  const [attempt, setAttempt] = useState(0);
+  if (attempt >= sources.length) return null;
   return (
     <a href={url} target="_blank" rel="noreferrer noopener" className="mt-1 block overflow-hidden rounded-lg">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={proxiedImage(url)}
+        key={sources[attempt]}
+        src={sources[attempt]}
         alt=""
         loading="lazy"
-        onError={() => setFailed(true)}
+        referrerPolicy="no-referrer"
+        onError={() => {
+          if (sources[attempt] !== proxiedImage(url)) directFailed.add(url);
+          setAttempt((a) => a + 1);
+        }}
         className="max-h-80 w-full bg-black/20 object-contain"
       />
     </a>

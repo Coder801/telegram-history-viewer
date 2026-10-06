@@ -14,12 +14,20 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return { error: "Неверный логин или пароль", username };
+  let token: string;
+  try {
+    const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      return { error: "Неверный логин или пароль", username };
+    }
+    token = await signSession({ userId: user.id, username: user.username });
+  } catch (err) {
+    // Misconfiguration (DB unreachable, missing tables, no SESSION_SECRET): log it instead of
+    // crashing the page, details are in the server logs and /api/health.
+    console.error("Login failed:", err);
+    return { error: "Ошибка сервера. Подробности в логах и на /api/health", username };
   }
 
-  const token = await signSession({ userId: user.id, username: user.username });
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

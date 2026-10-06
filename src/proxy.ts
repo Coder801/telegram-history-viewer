@@ -3,6 +3,7 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/api/health") return NextResponse.next();
   const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
 
   if (pathname === "/login") {

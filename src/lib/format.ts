@@ -60,6 +60,9 @@ export const isImageUrl = (url: string) => {
 
 export const proxiedImage = (url: string) => `/api/img?url=${encodeURIComponent(url)}`;
 
+/** Same image over https, so the browser can load it directly from an https page. */
+export const directImage = (url: string) => url.replace(/^http:\/\//i, "https://");
+
 const MEDIA_LABELS: Record<string, string> = {
   sticker: "Стикер",
   animation: "GIF",

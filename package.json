@@ -12,7 +12,8 @@
     "import": "tsx scripts/import.ts",
     "user:create": "tsx scripts/create-user.ts",
     "db:migrate:prod": "node scripts/migrate.mjs",
-    "db:dump": "pg_dump --no-owner --no-acl -Fc \"$DATABASE_URL\" -f chat_history.dump"
+    "db:dump": "node scripts/db-dump.mjs",
+    "db:restore": "node scripts/db-restore.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

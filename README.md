@@ -28,8 +28,8 @@ npm run dev                       # http://localhost:3000
 npm run import -- path/to/result.json --media-base-url=https://my-bucket.example.com/export
 ```
 
-Картинки по ссылкам в тексте сообщений загружаются через `/api/img`. Этот серверный прокси решает три задачи:
-обходит mixed content для `http://`, обходит защиту от хотлинка и не пускает запросы во внутренние адреса.
+Картинки по ссылкам в тексте сообщений браузер грузит напрямую с источника: `http://` заменяется на `https://`, Referer не отправляется.
+Если источник не отдаёт картинку (нет HTTPS, защита от хотлинка), браузер пробует ещё раз через серверный прокси `/api/img`, который не пускает запросы во внутренние адреса.
 
 ## Деплой на Railway
 
@@ -41,8 +41,8 @@ npm run import -- path/to/result.json --media-base-url=https://my-bucket.example
 4. Перенеси данные одним из двух способов. Строку подключения возьми из вкладки Postgres → Connect → *Public network*.
    - Восстановить локальную базу из дампа (быстрее всего):
      ```bash
-     DATABASE_URL=postgres://chat:chat@localhost:5435/chat_history npm run db:dump
-     pg_restore --no-owner --clean --if-exists -d "<railway public url>" chat_history.dump
+     npm run db:dump                                   # локальная база из .env -> chat_history.dump
+     npm run db:restore -- "<railway public url>"       # заливка дампа в Railway
      ```
    - Или импортировать заново прямо в Railway:
      ```bash
@@ -53,7 +53,9 @@ npm run import -- path/to/result.json --media-base-url=https://my-bucket.example
 ## Экспорт базы
 
 ```bash
-npm run db:dump      # pg_dump из $DATABASE_URL в chat_history.dump
+npm run db:dump                         # DATABASE_URL из окружения или .env -> chat_history.dump
+DATABASE_URL="<url>" npm run db:dump    # дамп другой базы, например из Railway
+npm run db:restore -- "<url>" [файл]    # восстановить дамп в указанную базу (существующие таблицы пересоздаются)
 ```
 
 ## Структура
